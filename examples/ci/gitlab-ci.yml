@@ -1,0 +1,23 @@
+# Example only. Copy into .gitlab-ci.yml of a real repo to use it.
+# Runs /trial on every merge request and blocks the merge on open critical findings.
+#
+# Needs:
+#   - Claude Code CLI in the runner image, authenticated through a masked CI variable
+#   - scripts/post-verdict and scripts/gate (see examples/ci/README.md)
+
+stages:
+  - review
+
+smart-review:
+  stage: review
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  script:
+    - claude -p "/trial $CI_MERGE_REQUEST_IID" --output-format json > trial-output.json
+    - ./scripts/post-verdict notes/cases/$CI_MERGE_REQUEST_IID/verdict.json
+    - ./scripts/gate notes/cases/$CI_MERGE_REQUEST_IID/verdict.json   # exit 1 if any critical is open
+  artifacts:
+    when: always
+    paths:
+      - notes/cases/$CI_MERGE_REQUEST_IID/
+      - trial-output.json

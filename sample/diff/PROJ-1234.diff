@@ -1,0 +1,80 @@
+diff --git a/src/Api/AddonsController.cs b/src/Api/AddonsController.cs
+new file mode 100644
+index 0000000..845b242
+--- /dev/null
++++ b/src/Api/AddonsController.cs
+@@ -0,0 +1,24 @@
++using Microsoft.AspNetCore.Authorization;
++using Microsoft.AspNetCore.Mvc;
++using Shared.Data;
++
++namespace Api;
++
++[ApiController]
++[Authorize(Policy = "TenantUser")]
++[Route("reservations")]
++public class AddonsController : ControllerBase
++{
++    private readonly BillingDbContext _db;
++
++    public AddonsController(BillingDbContext db) => _db = db;
++
++    [HttpGet("{reservationId}/addons/total")]
++    public async Task<decimal> GetAddonsTotal(int reservationId, [FromQuery] int tenantId)
++    {
++        var addons = await _db.Addons.NotDeleted().ForTenant(tenantId)
++            .Where(a => a.ReservationId == reservationId).ToListAsync();
++
++        return addons.Sum(a => a.Price);
++    }
++}
+diff --git a/src/Billing/InvoiceService.cs b/src/Billing/InvoiceService.cs
+index fc6c568..f7e4c94 100644
+--- a/src/Billing/InvoiceService.cs
++++ b/src/Billing/InvoiceService.cs
+@@ -18,13 +18,15 @@ public class InvoiceService : IInvoiceService
+ 
+     public async Task<decimal> GetReservationTotalAsync(int reservationId)
+     {
+-        var lines = await _db.InvoiceLines.ForTenant(_tenant.TenantId)
++        var lines = await _db.InvoiceLines.NotDeleted().ForTenant(_tenant.TenantId)
+             .Where(l => l.ReservationId == reservationId).ToListAsync();
+ 
+         var addons = await _db.Addons.ForTenant(_tenant.TenantId)
+             .Where(a => a.ReservationId == reservationId).ToListAsync();
+ 
+         var subtotal = lines.Sum(l => l.Amount) + addons.Sum(a => a.Price);
+-        return subtotal + subtotal * _taxRate;
++        var tax = Math.Round(subtotal * _taxRate, 2);
++
++        return subtotal + tax;
+     }
+ }
+diff --git a/src/Billing.Tests/InvoiceServiceTests.cs b/src/Billing.Tests/InvoiceServiceTests.cs
+new file mode 100644
+index 0000000..c2af7dc
+--- /dev/null
++++ b/src/Billing.Tests/InvoiceServiceTests.cs
+@@ -0,0 +1,22 @@
++using Billing;
++using Xunit;
++
++namespace Billing.Tests;
++
++public class InvoiceServiceTests : BillingTestBase
++{
++    [Fact]
++    public async Task Test1()
++    {
++        // Two lines of 50.00, one add-on of 20.00 that was deleted, tax 0%.
++        SeedLine(reservationId: 1, amount: 50.00m);
++        SeedLine(reservationId: 1, amount: 50.00m);
++        SeedAddon(reservationId: 1, price: 20.00m, deleted: true);
++        var sut = CreateService(taxRate: 0m);
++
++        var actual = await sut.GetReservationTotalAsync(1);
++
++        var expected = await CreateService(taxRate: 0m).GetReservationTotalAsync(1);
++        Assert.Equal(expected, actual);
++    }
++}
