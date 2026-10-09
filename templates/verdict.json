@@ -1,0 +1,28 @@
+{
+  "case": "<TICKET-ID>",
+  "mr": 0,
+  "trial": "summary",
+  "reason": "<why this trial type>",
+  "demo": false,
+  "gate": "PASS",
+  "findings": [
+    {
+      "id": "F-1",
+      "rule": "<RULE-ID | ADR-NNNN | AC-n>",
+      "severity": "critical",
+      "state": "open",
+      "claimed_severity": null,
+      "file": "<path>",
+      "line": 0,
+      "summary": "<one sentence>",
+      "evidence": "<code path, failing input or expert output>",
+      "prosecutor": "<agent name>",
+      "defense": null,
+      "expert": null,
+      "jury": null
+    }
+  ],
+  "discarded": [
+    { "accusation": "A-n", "prosecutor": "<agent name>", "reason": "<no evidence | settled by ADR-NNNN | refuted: … | jury: k keep, d drop>" }
+  ]
+}

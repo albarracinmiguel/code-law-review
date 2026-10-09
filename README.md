@@ -23,8 +23,8 @@ powershell -ExecutionPolicy Bypass -File .\setup.ps1
 |---|---|---|---|
 | Case law | `/case-law` mines past MR review threads | Skill | Jurisprudencia |
 | Doctrine | `/doctrine` extracts invariants from the wiki (`docs/domain/`) | Skill | Doctrina |
-| Constitution | Accepted ADRs in `docs/adr/` | Artifact | Constitución |
-| Codes | Approved rules in `.claude/guidelines/` | Artifact | Los Códigos |
+| Constitution | Accepted ADRs in `constitution/` | Artifact | Constitución |
+| Codes | Approved rules in `codes/` | Artifact | Los Códigos |
 | Official Gazette | `notes/gazette/candidates.md`: rules waiting for human approval | Artifact | Boletín Oficial |
 | Case file | Ticket + diff + relevant ADRs, built per MR | Artifact | Expediente |
 | Clerk | Builds the case file (cheap model, no judgment) | Agent | Secretario |
@@ -38,8 +38,8 @@ powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ## Hierarchy of law
 
 ```
-            Constitution  (docs/adr, status: Accepted)
-         Codes  (.claude/guidelines, enacted by a human)
+            Constitution  (constitution/, status: Accepted)
+         Codes  (codes/, enacted by a human)
    Case law + Doctrine  (interpret the rules above, never contradict them)
 ```
 
@@ -86,12 +86,14 @@ powershell -ExecutionPolicy Bypass -File .\setup.ps1
     defense.md
     expert-witness.md
     jury.md
-  guidelines/                  ← the Codes (enacted)
+constitution/                  ← the Constitution: ADRs
+codes/                         ← the Codes: rules in force (enacted)
 docs/
-  adr/                         ← the Constitution
   domain/                      ← simulated wiki export (doctrine source)
 notes/
   case-law/raw/                ← harvested MR threads (fake, for the demo)
+  case-law/runs/               ← what /case-law did, step by step
+  doctrine/runs/               ← what /doctrine did, step by step
   gazette/candidates.md        ← waiting for approval
   cases/PROJ-1234/             ← one complete trial, start to finish
 sample/
@@ -99,16 +101,18 @@ sample/
   diff/PROJ-1234.diff          ← the MR under review
   tickets/PROJ-1234.md         ← the ticket (tracker-agnostic)
 examples/ci/gitlab-ci.yml      ← how it would run on every MR
+templates/                     ← one template per artifact (ADR, ticket, case file, verdict, MR comments…)
 ```
 
 ## How to demo it (about 10 minutes)
 
-1. **The law.** Open `docs/adr/ADR-0004-data-access-ef-core.md` (look at "Alternatives") and `.claude/guidelines/data.md`.
-2. **Where rules come from.** Open `notes/case-law/raw/mr-412.md`, then `notes/gazette/candidates.md`. The same rule shows up across MRs and reviewers, gets proposed, and a human enacts it. Also look at the conflict (C-05) and the settled items (C-06, C-07).
+1. **The law.** Open `constitution/ADR-0004-data-access-ef-core.md` (look at "Alternatives") and `codes/data.md`.
+2. **Where rules come from.** Open `notes/case-law/raw/mr-412.md`, then the run `notes/case-law/runs/2025-10-01.md` (harvest → cluster → score → check against the law), then `notes/gazette/candidates.md`. The same rule shows up across MRs and reviewers, gets proposed, and a human enacts it. Also look at the conflict (C-05) and the settled items (C-06, C-07).
 3. **The trial.** Open `.claude/skills/trial/SKILL.md` and walk the steps.
 4. **One real case.** Go through `notes/cases/PROJ-1234/` in order:
    `case-file.md` → `trial-record.md` → `verdict.json` → `mr-comments.md`.
-5. **Run it yourself** (optional). In Claude Code, from this folder:
+5. **The loop closes.** `notes/case-law/raw/mr-701.md` is the same MR after the judges ruled, and `notes/case-law/runs/2025-10-15.md` turns a ruling into a new candidate (C-09) and spots something the trial missed.
+6. **Run it yourself** (optional). In Claude Code, from this folder:
    ```
    /trial PROJ-1234
    ```
@@ -120,6 +124,6 @@ examples/ci/gitlab-ci.yml      ← how it would run on every MR
 |---|---|
 | Skill and agent files, in Claude Code's format | GitLab, the ticket tracker and the wiki |
 | The process: steps, rules, severities, gate | MR numbers, reviewers' comments, ticket IDs |
-| The structure of every artifact | `sample/` code and the trial outcome in `notes/cases/` |
+| The structure of every artifact (see `templates/`) | `sample/` code and the trial outcome in `notes/cases/` |
 
 No metrics here on purpose. Measuring comes with the real demo: replay past MRs through (A) the current generic bot, (B) generic bot + ADRs, (C) `/trial`, and compare findings caught, false positives and cost per MR.

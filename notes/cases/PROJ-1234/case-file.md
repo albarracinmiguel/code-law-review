@@ -22,6 +22,6 @@ adrs:
 - ADR-0012 Money is decimal, rounded away from zero
 - _(ADR-0002 skipped: Superseded)_
 
-rules:   `.claude/guidelines/data.md`, `money.md`, `api.md`, `tests.md`
+rules:   `codes/data.md`, `money.md`, `api.md`, `tests.md`
 
 humans:  none yet (new MR)
